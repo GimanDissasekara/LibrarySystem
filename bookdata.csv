@@ -1,6 +1,6 @@
 barcode,title,topic,is_purchased
 B001,Python Basics,Programming,1
-B002,Python Fundamentals,Programming,0
+B002,Python Fundamentals,Programming,1
 B003,Advanced Python Programming,Programming,0
 B004,Web Development with Python,Programming,0
 B005,Data Science Essentials,Programming,0

@@ -13,15 +13,19 @@ class LibraryManagementSystem:
             'books': 'bookdata.csv'
         }
         self.db_paths = {
-            'purchases': 'book_purchases_database.db'
+            'purchases': 'book_purchases_database.db',
+            'returns': 'book_returns_database.db'
         }
         
-        # Initialize database connection for purchases
+        # Initialize database connections
         self.purchase_conn = sqlite3.connect(self.db_paths['purchases'])
+        self.return_conn = sqlite3.connect(self.db_paths['returns'])
         self.purchase_cursor = self.purchase_conn.cursor()
+        self.return_cursor = self.return_conn.cursor()
         
-        # Create purchases table
+        # Create purchases and returns tables
         self.create_purchases_table()
+        self.create_returns_table()
         
         # Load data from CSV files
         self.students = self.load_csv_data('students')
@@ -36,12 +40,124 @@ class LibraryManagementSystem:
         self.notebook = ttk.Notebook(self.root)
         self.notebook.pack(expand=True, fill='both')
         
-        # Create Purchase Tab
+        # Create tabs
         self.create_purchase_tab()
-        
-        # Create Book Search Tab
         self.create_book_search_tab()
+        self.create_book_return_tab()
     
+    
+        def create_purchases_table(self):
+         """Create purchases table in SQLite database."""
+        self.purchase_cursor.execute('''
+        CREATE TABLE IF NOT EXISTS book_purchases (
+            purchase_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            school_id TEXT,
+            book_barcode TEXT,
+            purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        ''')
+        self.purchase_conn.commit()
+    
+    def create_returns_table(self):
+        """Create returns table in SQLite database."""
+        self.return_cursor.execute('''
+        CREATE TABLE IF NOT EXISTS book_returns (
+            return_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            school_id TEXT,
+            book_barcode TEXT,
+            return_date DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        ''')
+        self.return_conn.commit()
+    
+    def create_book_return_tab(self):
+        """Create the book return tab."""
+        return_frame = ttk.Frame(self.notebook)
+        self.notebook.add(return_frame, text="Book Return")
+        
+        # Get unique classes for dropdown
+        unique_classes = sorted(set(student['class'] for student in self.students))
+        
+        # Class dropdown
+        tk.Label(return_frame, text="Select Your Class:").pack(pady=10)
+        self.return_class_var = tk.StringVar()
+        self.return_class_dropdown = ttk.Combobox(return_frame, textvariable=self.return_class_var, values=unique_classes, state="readonly")
+        self.return_class_dropdown.pack(pady=5)
+        
+        # School ID input
+        tk.Label(return_frame, text="Enter Your School ID:").pack(pady=10)
+        self.return_school_id_entry = tk.Entry(return_frame)
+        self.return_school_id_entry.pack(pady=5)
+        
+        # Book Barcode input
+        tk.Label(return_frame, text="Enter Book Barcode:").pack(pady=10)
+        self.return_barcode_entry = tk.Entry(return_frame)
+        self.return_barcode_entry.pack(pady=5)
+        
+        # Return Button
+        return_button = tk.Button(return_frame, text="Return Book", command=self.return_book)
+        return_button.pack(pady=15)
+    
+    def return_book(self):
+        """Process book return."""
+        # Validate inputs
+        student_class = self.return_class_var.get().strip()
+        school_id = self.return_school_id_entry.get().strip()
+        book_barcode = self.return_barcode_entry.get().strip()
+        
+        # Validate student
+        student = next((
+            s for s in self.students 
+            if s['school_id'] == school_id and s['class'] == student_class
+        ), None)
+        
+        if not student:
+            messagebox.showerror("Error", "Invalid Student Details")
+            return
+        
+        # Check if book was previously purchased
+        self.purchase_cursor.execute('''
+            SELECT * FROM book_purchases 
+            WHERE school_id = ? AND book_barcode = ?
+        ''', (school_id, book_barcode))
+        purchase_record = self.purchase_cursor.fetchone()
+        
+        if not purchase_record:
+            messagebox.showerror("Error", "No purchase record found for this book and student")
+            return
+        
+        # Find the book in memory
+        book = next((
+            b for b in self.books 
+            if b['barcode'] == book_barcode and b['is_purchased'] == 1
+        ), None)
+        
+        if not book:
+            messagebox.showerror("Error", "Book not found or already returned")
+            return
+        
+        # Update book status in memory
+        book['is_purchased'] = 0
+        
+        # Record the return in database
+        self.return_cursor.execute('''
+            INSERT INTO book_returns (school_id, book_barcode) 
+            VALUES (?, ?)
+        ''', (school_id, book_barcode))
+        self.return_conn.commit()
+        
+        # Update CSV 
+        self.update_book_csv()
+        
+        # Show success message
+        messagebox.showinfo("Success", f"Book {book_barcode} returned successfully!")
+        
+        # Clear entries
+        self.return_class_var.set('')
+        self.return_school_id_entry.delete(0, tk.END)
+        self.return_barcode_entry.delete(0, tk.END)
+        
+        
     def create_purchases_table(self):
         """Create purchases table in SQLite database."""
         self.purchase_cursor.execute('''
