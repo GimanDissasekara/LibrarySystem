@@ -1,0 +1,16 @@
+barcode,title,topic,is_purchased
+B001,Python Basics,Programming,1
+B002,Python Fundamentals,Programming,0
+B003,Advanced Python Programming,Programming,0
+B004,Web Development with Python,Programming,0
+B005,Data Science Essentials,Programming,0
+B006,World History,History,0
+B007,Ancient Civilizations,History,0
+B008,Modern World History,History,0
+B009,European History,History,0
+B010,American History,History,0
+B011,Mathematics Fundamentals,Mathematics,0
+B012,Algebra Basics,Mathematics,0
+B013,Geometry Principles,Mathematics,0
+B014,Calculus Introduction,Mathematics,0
+B015,Trigonometry,Mathematics,0
