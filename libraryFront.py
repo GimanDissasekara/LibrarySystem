@@ -6,6 +6,8 @@ from tkinter import ttk, messagebox, font, filedialog
 from fuzzywuzzy import process
 from PIL import Image, ImageTk
 import webbrowser
+from fuzzywuzzy import process
+from fuzzywuzzy import fuzz
 
 class LibraryManagementSystem:
     def __init__(self):
