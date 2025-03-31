@@ -262,11 +262,17 @@ class LibraryManagementSystem:
             textvariable=self.search_var,
             width=40, 
             style='TCombobox',
-            font=self.label_font
+            font=self.label_font,
+            postcommand=self.update_search_suggestions  # Add this line
         )
         self.search_entry.pack(side='left', expand=True, fill='x', padx=(0, 10))
         self.search_entry.bind('<KeyRelease>', self.update_search_suggestions)
         self.search_entry.bind('<Return>', lambda e: self.search_book())
+        
+        # Initialize with all book titles
+        self.search_entry['values'] = [book['title'] for book in self.books]
+        
+        # Rest of the method remains the same...
         
         # Search Button
         search_button = ttk.Button(
@@ -313,17 +319,27 @@ class LibraryManagementSystem:
     def update_search_suggestions(self, event=None):
         """Update book title suggestions as user types."""
         current_text = self.search_var.get().lower()
+        
         if not current_text:
-            self.search_entry['values'] = []
+            # Show all books when search is empty
+            self.search_entry['values'] = [book['title'] for book in self.books]
             return
         
-        # Get matching book titles
+        # Get matching book titles using fuzzy matching
         book_titles = [book['title'] for book in self.books]
-        matches = [title for title in book_titles if current_text in title.lower()]
         
-        # Limit to top 10 matches
-        self.search_entry['values'] = matches[:10]
-    
+        # Use fuzzy matching for better results
+        matches = process.extract(current_text, book_titles, limit=10)
+        
+        # Extract just the titles from the matches
+        suggestions = [match[0] for match in matches if match[1] > 40]  # Only show matches with score > 40
+        
+        # If we have matches, update the combobox values
+        if suggestions:
+            self.search_entry['values'] = suggestions
+        else:
+            self.search_entry['values'] = []
+
     def create_purchase_tab(self):
         """Create the book purchase tab with improved design and autocomplete."""
         purchase_frame = ttk.Frame(self.notebook, padding=20)
@@ -973,222 +989,128 @@ def check_requirements():
     return True
 
 def main():
-    """Main entry point for the application with improved error handling."""
+    """Main entry point for the Library Management System application."""
     try:
         # Check for required packages
         if not check_requirements():
             messagebox.showerror(
                 "Missing Requirements",
-                "Required packages could not be installed. Please install 'fuzzywuzzy' and 'pillow' manually."
+                "The application cannot start because required packages are missing.\n"
+                "Please check the console for details."
             )
             return
-        
-        # Create a splash screen while checking requirements
-        splash_root = tk.Tk()
-        splash_root.title("Library Management System")
-        splash_root.geometry("400x200")
-        splash_root.configure(bg='#4a6fa5')
-        splash_root.overrideredirect(True)  # Remove window decorations
-        
-        # Center splash screen
-        screen_width = splash_root.winfo_screenwidth()
-        screen_height = splash_root.winfo_screenheight()
-        x = (screen_width - 400) // 2
-        y = (screen_height - 200) // 2
-        splash_root.geometry(f"400x200+{x}+{y}")
-        
-        # Add title and loading message
-        splash_label = tk.Label(
-            splash_root,
-            text="Library Management System",
-            font=('Helvetica', 16, 'bold'),
-            bg='#4a6fa5',
-            fg='white'
-        )
-        splash_label.pack(pady=50)
-        
-        loading_label = tk.Label(
-            splash_root,
-            text="Loading...",
-            font=('Helvetica', 10),
-            bg='#4a6fa5',
-            fg='white'
-        )
-        loading_label.pack()
-        
-        splash_root.update()
-        
+
         # Check for required CSV files
         required_files = ['studentdetails.csv', 'bookdata.csv']
         missing_files = [f for f in required_files if not os.path.exists(f)]
         
         if missing_files:
-            # Close splash screen before showing file dialogs
-            splash_root.destroy()
-            
             root = tk.Tk()
-            root.withdraw()  # Hide the root window for cleaner dialogs
+            root.withdraw()  # Hide main window
             
-            # Process each missing file
+            # Create a list to track successfully copied files
+            copied_files = []
+            
             for file in missing_files:
-                response = messagebox.askquestion(
+                response = messagebox.askyesno(
                     "Missing File",
-                    f"The required file '{file}' was not found.\n\nWould you like to locate this file?",
-                    icon='warning'
+                    f"The required file '{file}' was not found.\n\n"
+                    "Would you like to locate this file now?"
                 )
                 
-                if response == 'yes':
-                    file_path = filedialog.askopenfilename(
-                        title=f"Locate {file}",
-                        filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
+                if not response:
+                    messagebox.showwarning(
+                        "Warning",
+                        f"The application may not function properly without '{file}'."
                     )
-                    
-                    if file_path:
-                        # Copy file to current directory
-                        try:
-                            import shutil
-                            shutil.copy(file_path, file)
-                        except Exception as e:
-                            messagebox.showerror(
-                                "Error",
-                                f"Could not copy file '{file}':\n\n{str(e)}"
-                            )
-                            root.destroy()
-                            return
-                    else:
-                        # User canceled file selection, offer to create sample
-                        response = messagebox.askquestion(
-                            "Create Sample File",
-                            f"Would you like to create a sample {file} file?",
-                            icon='question'
-                        )
-                        
-                        if response == 'yes':
-                            try:
-                                create_sample_file(file)
-                            except Exception as e:
-                                messagebox.showerror(
-                                    "Error",
-                                    f"Could not create sample file '{file}':\n\n{str(e)}"
-                                )
-                                root.destroy()
-                                return
-                        else:
-                            messagebox.showinfo(
-                                "Application Closing",
-                                f"Application cannot run without {file}. Exiting now."
-                            )
-                            root.destroy()
-                            return
-                else:
-                    # User doesn't want to locate file, offer to create sample
-                    response = messagebox.askquestion(
-                        "Create Sample File",
-                        f"Would you like to create a sample {file} file?",
-                        icon='question'
-                    )
-                    
-                    if response == 'yes':
-                        try:
-                            create_sample_file(file)
-                        except Exception as e:
-                            messagebox.showerror(
-                                "Error",
-                                f"Could not create sample file '{file}':\n\n{str(e)}"
-                            )
-                            root.destroy()
-                            return
-                    else:
+                    continue
+                
+                file_path = filedialog.askopenfilename(
+                    title=f"Locate {file}",
+                    filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
+                )
+                
+                if file_path:
+                    try:
+                        # Verify the file is actually a CSV before copying
+                        if not file_path.lower().endswith('.csv'):
+                            raise ValueError("Selected file is not a CSV file")
+                            
+                        shutil.copy(file_path, file)
+                        copied_files.append(file)
                         messagebox.showinfo(
-                            "Application Closing",
-                            f"Application cannot run without {file}. Exiting now."
+                            "Success",
+                            f"File '{os.path.basename(file_path)}' was successfully copied as '{file}'."
                         )
-                        root.destroy()
-                        return
-            
-            # Destroy the temporary root window
-            root.destroy()
-        else:
-            # If no missing files, just destroy the splash screen
-            splash_root.destroy()
-        
-        # Start the main application
-        app = LibraryManagementSystem()
-        app.run()
-        
-    except Exception as e:
-        # Catch any unexpected errors during startup
-        try:
-            # Try to show an error dialog
-            import traceback
-            error_details = traceback.format_exc()
-            
-            error_root = tk.Tk()
-            error_root.withdraw()
-            
-            messagebox.showerror(
-                "Critical Error",
-                f"An unexpected error occurred while starting the application:\n\n{str(e)}\n\n"
-                f"Would you like to see detailed error information?",
-            )
-            
-            show_details = messagebox.askyesno(
-                "Error Details",
-                "Would you like to see detailed error information?"
-            )
-            
-            if show_details:
-                # Create a simple window to show error details
-                detail_window = tk.Toplevel(error_root)
-                detail_window.title("Error Details")
-                detail_window.geometry("600x400")
-                
-                # Add text widget with scrollbar
-                frame = tk.Frame(detail_window)
-                frame.pack(expand=True, fill='both', padx=10, pady=10)
-                
-                scrollbar = tk.Scrollbar(frame)
-                scrollbar.pack(side='right', fill='y')
-                
-                error_text = tk.Text(frame, wrap='word', yscrollcommand=scrollbar.set)
-                error_text.pack(expand=True, fill='both')
-                error_text.insert('1.0', error_details)
-                error_text.config(state='disabled')
-                
-                scrollbar.config(command=error_text.yview)
-                
-                # Close button
-                close_button = tk.Button(
-                    detail_window,
-                    text="Close",
-                    command=detail_window.destroy
-                )
-                close_button.pack(pady=10)
-                
-                detail_window.transient(error_root)
-                detail_window.grab_set()
-                error_root.wait_window(detail_window)
-            
-            error_root.destroy()
-            
-        except:
-            # If even the error dialog fails, fall back to console
-            print("Critical application error:")
-            import traceback
-            traceback.print_exc()
+                    except Exception as e:
+                        messagebox.showerror(
+                            "Error",
+                            f"Could not copy file:\n\n{str(e)}\n\n"
+                            "Please try again with a valid CSV file."
+                        )
+                        continue
+                else:
+                    messagebox.showwarning(
+                        "Warning",
+                        f"The application may not function properly without '{file}'."
+                    )
 
-def create_sample_file(file_name):
-    """Create a sample CSV file with minimal data."""
-    if file_name == 'studentdetails.csv':
-        with open(file_name, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerow(['school_id', 'name', 'class'])
-            writer.writerow(['S001', 'Sample Student', 'Class 10'])
-    elif file_name == 'bookdata.csv':
-        with open(file_name, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerow(['barcode', 'title', 'topic', 'is_purchased'])
-            writer.writerow(['B001', 'Sample Book', 'General', '0'])
+            # Verify all required files are now available
+            still_missing = [f for f in required_files if not os.path.exists(f)]
+            if still_missing:
+                messagebox.showwarning(
+                    "Missing Files",
+                    f"The application may not function properly without: {', '.join(still_missing)}\n\n"
+                    "You can add these files later and restart the application."
+                )
+
+        # Verify minimum data requirements before starting
+        try:
+            # Check if student data exists and is not empty
+            if os.path.exists('studentdetails.csv'):
+                with open('studentdetails.csv', 'r') as f:
+                    reader = csv.reader(f)
+                    if len(list(reader)) <= 1:  # Just header or empty
+                        raise ValueError("Student data file is empty or contains only headers")
+            
+            # Check if book data exists and is not empty
+            if os.path.exists('bookdata.csv'):
+                with open('bookdata.csv', 'r') as f:
+                    reader = csv.reader(f)
+                    if len(list(reader)) <= 1:  # Just header or empty
+                        raise ValueError("Book data file is empty or contains only headers")
+        except Exception as e:
+            messagebox.showerror(
+                "Data Error",
+                f"Problem with data files:\n\n{str(e)}\n\n"
+                "Please ensure both studentdetails.csv and bookdata.csv contain valid data."
+            )
+            return
+
+        # Run the application
+        app = LibraryManagementSystem()
+        
+        # Set window icon if available
+        try:
+            if os.path.exists('library_icon.ico'):
+                app.root.iconbitmap('library_icon.ico')
+        except Exception as e:
+            print(f"Could not set window icon: {str(e)}")
+        
+        app.run()
+
+    except Exception as e:
+        messagebox.showerror(
+            "Fatal Error",
+            f"The application encountered an unexpected error:\n\n{str(e)}\n\n"
+            "Please contact support for assistance."
+        )
+        raise  # Re-raise the exception for debugging purposes
+
 
 if __name__ == "__main__":
+    # Add these imports at the top if not already present
+    import shutil
+    import csv
+    
     main()
