@@ -243,7 +243,7 @@ class LibraryManagementSystem:
         return data
     
     def create_book_search_tab(self):
-        """Create the book search tab with fuzzy matching."""
+        """Create the book search tab with fuzzy matching and autocomplete."""
         search_frame = ttk.Frame(self.notebook, padding=20)
         self.notebook.add(search_frame, text="🔍 Book Search")
         
@@ -251,17 +251,20 @@ class LibraryManagementSystem:
         search_container = ttk.Frame(search_frame)
         search_container.pack(fill='x', pady=(0, 20))
         
-        # Book Name input
+        # Book Name input with autocomplete
         ttk.Label(search_container, text="Search Books:", style='TLabel').pack(side='left', padx=(0, 10))
         
-        self.search_entry = ttk.Entry(
+        self.search_var = tk.StringVar()
+        self.search_entry = ttk.Combobox(
             search_container, 
+            textvariable=self.search_var,
             width=40, 
-            style='TEntry',
+            style='TCombobox',
             font=self.label_font
         )
         self.search_entry.pack(side='left', expand=True, fill='x', padx=(0, 10))
-        self.search_entry.bind('<Return>', lambda e: self.search_book())  # Search on Enter key
+        self.search_entry.bind('<KeyRelease>', self.update_search_suggestions)
+        self.search_entry.bind('<Return>', lambda e: self.search_book())
         
         # Search Button
         search_button = ttk.Button(
@@ -305,8 +308,22 @@ class LibraryManagementSystem:
         self.search_results.insert(tk.END, "Enter a book title to search...\n")
         self.search_results.config(state='disabled')
     
+    def update_search_suggestions(self, event=None):
+        """Update book title suggestions as user types."""
+        current_text = self.search_var.get().lower()
+        if not current_text:
+            self.search_entry['values'] = []
+            return
+        
+        # Get matching book titles
+        book_titles = [book['title'] for book in self.books]
+        matches = [title for title in book_titles if current_text in title.lower()]
+        
+        # Limit to top 10 matches
+        self.search_entry['values'] = matches[:10]
+    
     def create_purchase_tab(self):
-        """Create the book purchase tab with improved design."""
+        """Create the book purchase tab with improved design and autocomplete."""
         purchase_frame = ttk.Frame(self.notebook, padding=20)
         self.notebook.add(purchase_frame, text="🛒 Book Purchase")
         
@@ -322,11 +339,11 @@ class LibraryManagementSystem:
             style='TLabel'
         ).pack(pady=(0, 20))
         
-        # Form fields
+        # Form fields with autocomplete
         fields = [
             ("Select Your Class:", 'class_var', 'combobox'),
-            ("Enter Your School ID:", 'school_id_entry', 'entry'),
-            ("Enter Book Barcode:", 'barcode_entry', 'entry')
+            ("Enter Your School ID:", 'school_id_var', 'combobox'),
+            ("Enter Book Barcode:", 'barcode_var', 'combobox')
         ]
         
         # Get unique classes for dropdown
@@ -347,24 +364,23 @@ class LibraryManagementSystem:
             ).pack(side='left', padx=(0, 10))
             
             # Add field
-            if field_type == 'entry':
-                entry = ttk.Entry(
-                    field_container,
-                    style='TEntry',
-                    font=self.label_font
-                )
-                entry.pack(side='left', expand=True, fill='x')
-                setattr(self, attr_name, entry)
-            elif field_type == 'combobox':
+            if field_type == 'combobox':
                 var = tk.StringVar()
                 combobox = ttk.Combobox(
                     field_container,
                     textvariable=var,
-                    values=unique_classes,
-                    state="readonly",
                     font=self.label_font,
                     style='TCombobox'
                 )
+                
+                if label_text == "Select Your Class:":
+                    combobox['values'] = unique_classes
+                    combobox['state'] = "readonly"
+                elif label_text == "Enter Your School ID:":
+                    combobox.bind('<KeyRelease>', lambda e: self.update_student_suggestions())
+                elif label_text == "Enter Book Barcode:":
+                    combobox.bind('<KeyRelease>', lambda e: self.update_barcode_suggestions())
+                
                 combobox.pack(side='left', expand=True, fill='x')
                 setattr(self, attr_name, var)
         
@@ -399,8 +415,51 @@ class LibraryManagementSystem:
             justify='left'
         ).pack(fill='x', pady=10)
     
+    def update_student_suggestions(self):
+        """Update student ID suggestions as user types."""
+        current_text = self.school_id_var.get().lower()
+        if not current_text:
+            return
+        
+        # Get matching student IDs
+        student_ids = [student['school_id'] for student in self.students]
+        matches = [sid for sid in student_ids if current_text in sid.lower()]
+        
+        # Find the combobox widget
+        for child in self.notebook.winfo_children():
+            if isinstance(child, ttk.Frame) and "Purchase" in child.winfo_name():
+                for widget in child.winfo_children():
+                    if isinstance(widget, ttk.Frame):
+                        for subwidget in widget.winfo_children():
+                            if isinstance(subwidget, ttk.Combobox):
+                                if subwidget.get() == current_text:
+                                    subwidget['values'] = matches[:10]
+                                    return
+    
+    def update_barcode_suggestions(self):
+        """Update book barcode suggestions as user types."""
+        current_text = self.barcode_var.get().lower()
+        if not current_text:
+            return
+        
+        # Get matching barcodes (only books that are available)
+        barcodes = [book['barcode'] for book in self.books if book['is_purchased'] == 0]
+        matches = [barcode for barcode in barcodes if current_text in barcode.lower()]
+        
+        # Find the purchase barcode combobox and update its values
+        for child in self.notebook.winfo_children():
+            if isinstance(child, ttk.Frame):
+                for widget in child.winfo_children():
+                    if isinstance(widget, ttk.Frame):
+                        for subframe in widget.winfo_children():
+                            if isinstance(subframe, ttk.Frame):
+                                for subwidget in subframe.winfo_children():
+                                    if isinstance(subwidget, ttk.Combobox) and subwidget.get() == current_text:
+                                        subwidget['values'] = matches[:10]
+                                        return
+    
     def create_book_return_tab(self):
-        """Create the book return tab."""
+        """Create the book return tab with autocomplete."""
         return_frame = ttk.Frame(self.notebook, padding=20)
         self.notebook.add(return_frame, text="↩️ Book Return")
         
@@ -416,11 +475,11 @@ class LibraryManagementSystem:
             style='TLabel'
         ).pack(pady=(0, 20))
         
-        # Form fields
+        # Form fields with autocomplete
         fields = [
             ("Select Your Class:", 'return_class_var', 'combobox'),
-            ("Enter Your School ID:", 'return_school_id_entry', 'entry'),
-            ("Enter Book Barcode:", 'return_barcode_entry', 'entry')
+            ("Enter Your School ID:", 'return_school_id_var', 'combobox'),
+            ("Enter Book Barcode:", 'return_barcode_var', 'combobox')
         ]
         
         # Get unique classes for dropdown
@@ -441,24 +500,23 @@ class LibraryManagementSystem:
             ).pack(side='left', padx=(0, 10))
             
             # Add field
-            if field_type == 'entry':
-                entry = ttk.Entry(
-                    field_container,
-                    style='TEntry',
-                    font=self.label_font
-                )
-                entry.pack(side='left', expand=True, fill='x')
-                setattr(self, attr_name, entry)
-            elif field_type == 'combobox':
+            if field_type == 'combobox':
                 var = tk.StringVar()
                 combobox = ttk.Combobox(
                     field_container,
                     textvariable=var,
-                    values=unique_classes,
-                    state="readonly",
                     font=self.label_font,
                     style='TCombobox'
                 )
+                
+                if label_text == "Select Your Class:":
+                    combobox['values'] = unique_classes
+                    combobox['state'] = "readonly"
+                elif label_text == "Enter Your School ID:":
+                    combobox.bind('<KeyRelease>', lambda e: self.update_return_student_suggestions())
+                elif label_text == "Enter Book Barcode:":
+                    combobox.bind('<KeyRelease>', lambda e: self.update_return_barcode_suggestions())
+                
                 combobox.pack(side='left', expand=True, fill='x')
                 setattr(self, attr_name, var)
         
@@ -492,6 +550,49 @@ class LibraryManagementSystem:
             font=('Helvetica', 9),
             justify='left'
         ).pack(fill='x', pady=10)
+    
+    def update_return_student_suggestions(self):
+        """Update student ID suggestions for return tab."""
+        current_text = self.return_school_id_var.get().lower()
+        if not current_text:
+            return
+        
+        # Get matching student IDs
+        student_ids = [student['school_id'] for student in self.students]
+        matches = [sid for sid in student_ids if current_text in sid.lower()]
+        
+        # Find the combobox widget
+        for child in self.notebook.winfo_children():
+            if isinstance(child, ttk.Frame) and "Return" in child.winfo_name():
+                for widget in child.winfo_children():
+                    if isinstance(widget, ttk.Frame):
+                        for subwidget in widget.winfo_children():
+                            if isinstance(subwidget, ttk.Combobox):
+                                if subwidget.get() == current_text:
+                                    subwidget['values'] = matches[:10]
+                                    return
+    
+    def update_return_barcode_suggestions(self):
+        """Update book barcode suggestions for return tab."""
+        current_text = self.return_barcode_var.get().lower()
+        if not current_text:
+            return
+        
+        # Get matching barcodes (only books that are checked out)
+        barcodes = [book['barcode'] for book in self.books if book['is_purchased'] == 1]
+        matches = [barcode for barcode in barcodes if current_text in barcode.lower()]
+        
+        # Find the return barcode combobox and update its values
+        for child in self.notebook.winfo_children():
+            if isinstance(child, ttk.Frame):
+                for widget in child.winfo_children():
+                    if isinstance(widget, ttk.Frame):
+                        for subframe in widget.winfo_children():
+                            if isinstance(subframe, ttk.Frame):
+                                for subwidget in subframe.winfo_children():
+                                    if isinstance(subwidget, ttk.Combobox) and subwidget.get() == current_text:
+                                        subwidget['values'] = matches[:10]
+                                        return
     
     def create_help_tab(self):
         """Create a help/instructions tab."""
@@ -582,7 +683,7 @@ For support, please contact your system administrator.
         self.search_results.delete(1.0, tk.END)
         
         # Get search query
-        search_query = self.search_entry.get().strip()
+        search_query = self.search_var.get().strip()
         
         if not search_query:
             self.search_results.insert(tk.END, "Please enter a book name to search...\n")
@@ -642,8 +743,8 @@ For support, please contact your system administrator.
         """Process book purchase with validation."""
         # Get input values
         student_class = self.class_var.get().strip()
-        school_id = self.school_id_entry.get().strip()
-        book_barcode = self.barcode_entry.get().strip()
+        school_id = self.school_id_var.get().strip()
+        book_barcode = self.barcode_var.get().strip()
         
         # Validate inputs
         if not all([student_class, school_id, book_barcode]):
@@ -705,8 +806,8 @@ For support, please contact your system administrator.
             
             # Clear entries
             self.class_var.set('')
-            self.school_id_entry.delete(0, tk.END)
-            self.barcode_entry.delete(0, tk.END)
+            self.school_id_var.set('')
+            self.barcode_var.set('')
             
             self.update_status(f"Book {book_barcode} checked out to {student['name']}")
         except Exception as e:
@@ -717,8 +818,8 @@ For support, please contact your system administrator.
         """Process book return with validation."""
         # Get input values
         student_class = self.return_class_var.get().strip()
-        school_id = self.return_school_id_entry.get().strip()
-        book_barcode = self.return_barcode_entry.get().strip()
+        school_id = self.return_school_id_var.get().strip()
+        book_barcode = self.return_barcode_var.get().strip()
         
         # Validate inputs
         if not all([student_class, school_id, book_barcode]):
@@ -792,8 +893,8 @@ For support, please contact your system administrator.
             
             # Clear entries
             self.return_class_var.set('')
-            self.return_school_id_entry.delete(0, tk.END)
-            self.return_barcode_entry.delete(0, tk.END)
+            self.return_school_id_var.set('')
+            self.return_barcode_var.set('')
             
             self.update_status(f"Book {book_barcode} returned by {student['name']}")
         except Exception as e:
@@ -870,51 +971,222 @@ def check_requirements():
     return True
 
 def main():
-    # Check for required packages
-    if not check_requirements():
-        return
-    
-    # Check for required CSV files
-    required_files = ['studentdetails.csv', 'bookdata.csv']
-    missing_files = [f for f in required_files if not os.path.exists(f)]
-    
-    if missing_files:
-        root = tk.Tk()
-        root.withdraw()  # Hide main window
+    """Main entry point for the application with improved error handling."""
+    try:
+        # Check for required packages
+        if not check_requirements():
+            messagebox.showerror(
+                "Missing Requirements",
+                "Required packages could not be installed. Please install 'fuzzywuzzy' and 'pillow' manually."
+            )
+            return
         
-        # Ask user to locate missing files
-        for file in missing_files:
-            messagebox.showwarning(
-                "Missing File",
-                f"The required file '{file}' was not found.\n\nPlease locate this file."
-            )
+        # Create a splash screen while checking requirements
+        splash_root = tk.Tk()
+        splash_root.title("Library Management System")
+        splash_root.geometry("400x200")
+        splash_root.configure(bg='#4a6fa5')
+        splash_root.overrideredirect(True)  # Remove window decorations
+        
+        # Center splash screen
+        screen_width = splash_root.winfo_screenwidth()
+        screen_height = splash_root.winfo_screenheight()
+        x = (screen_width - 400) // 2
+        y = (screen_height - 200) // 2
+        splash_root.geometry(f"400x200+{x}+{y}")
+        
+        # Add title and loading message
+        splash_label = tk.Label(
+            splash_root,
+            text="Library Management System",
+            font=('Helvetica', 16, 'bold'),
+            bg='#4a6fa5',
+            fg='white'
+        )
+        splash_label.pack(pady=50)
+        
+        loading_label = tk.Label(
+            splash_root,
+            text="Loading...",
+            font=('Helvetica', 10),
+            bg='#4a6fa5',
+            fg='white'
+        )
+        loading_label.pack()
+        
+        splash_root.update()
+        
+        # Check for required CSV files
+        required_files = ['studentdetails.csv', 'bookdata.csv']
+        missing_files = [f for f in required_files if not os.path.exists(f)]
+        
+        if missing_files:
+            # Close splash screen before showing file dialogs
+            splash_root.destroy()
             
-            file_path = filedialog.askopenfilename(
-                title=f"Locate {file}",
-                filetypes=[("CSV files", "*.csv")]
-            )
+            root = tk.Tk()
+            root.withdraw()  # Hide the root window for cleaner dialogs
             
-            if file_path:
-                # Copy file to current directory
-                import shutil
-                try:
-                    shutil.copy(file_path, file)
-                except Exception as e:
-                    messagebox.showerror(
-                        "Error",
-                        f"Could not copy file:\n\n{str(e)}"
-                    )
-                    return
-            else:
-                messagebox.showerror(
-                    "Error",
-                    f"Cannot run without {file}. Please ensure all required files are available."
+            # Process each missing file
+            for file in missing_files:
+                response = messagebox.askquestion(
+                    "Missing File",
+                    f"The required file '{file}' was not found.\n\nWould you like to locate this file?",
+                    icon='warning'
                 )
-                return
-    
-    # Run the application
-    app = LibraryManagementSystem()
-    app.run()
+                
+                if response == 'yes':
+                    file_path = filedialog.askopenfilename(
+                        title=f"Locate {file}",
+                        filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
+                    )
+                    
+                    if file_path:
+                        # Copy file to current directory
+                        try:
+                            import shutil
+                            shutil.copy(file_path, file)
+                        except Exception as e:
+                            messagebox.showerror(
+                                "Error",
+                                f"Could not copy file '{file}':\n\n{str(e)}"
+                            )
+                            root.destroy()
+                            return
+                    else:
+                        # User canceled file selection, offer to create sample
+                        response = messagebox.askquestion(
+                            "Create Sample File",
+                            f"Would you like to create a sample {file} file?",
+                            icon='question'
+                        )
+                        
+                        if response == 'yes':
+                            try:
+                                create_sample_file(file)
+                            except Exception as e:
+                                messagebox.showerror(
+                                    "Error",
+                                    f"Could not create sample file '{file}':\n\n{str(e)}"
+                                )
+                                root.destroy()
+                                return
+                        else:
+                            messagebox.showinfo(
+                                "Application Closing",
+                                f"Application cannot run without {file}. Exiting now."
+                            )
+                            root.destroy()
+                            return
+                else:
+                    # User doesn't want to locate file, offer to create sample
+                    response = messagebox.askquestion(
+                        "Create Sample File",
+                        f"Would you like to create a sample {file} file?",
+                        icon='question'
+                    )
+                    
+                    if response == 'yes':
+                        try:
+                            create_sample_file(file)
+                        except Exception as e:
+                            messagebox.showerror(
+                                "Error",
+                                f"Could not create sample file '{file}':\n\n{str(e)}"
+                            )
+                            root.destroy()
+                            return
+                    else:
+                        messagebox.showinfo(
+                            "Application Closing",
+                            f"Application cannot run without {file}. Exiting now."
+                        )
+                        root.destroy()
+                        return
+            
+            # Destroy the temporary root window
+            root.destroy()
+        else:
+            # If no missing files, just destroy the splash screen
+            splash_root.destroy()
+        
+        # Start the main application
+        app = LibraryManagementSystem()
+        app.run()
+        
+    except Exception as e:
+        # Catch any unexpected errors during startup
+        try:
+            # Try to show an error dialog
+            import traceback
+            error_details = traceback.format_exc()
+            
+            error_root = tk.Tk()
+            error_root.withdraw()
+            
+            messagebox.showerror(
+                "Critical Error",
+                f"An unexpected error occurred while starting the application:\n\n{str(e)}\n\n"
+                f"Would you like to see detailed error information?",
+            )
+            
+            show_details = messagebox.askyesno(
+                "Error Details",
+                "Would you like to see detailed error information?"
+            )
+            
+            if show_details:
+                # Create a simple window to show error details
+                detail_window = tk.Toplevel(error_root)
+                detail_window.title("Error Details")
+                detail_window.geometry("600x400")
+                
+                # Add text widget with scrollbar
+                frame = tk.Frame(detail_window)
+                frame.pack(expand=True, fill='both', padx=10, pady=10)
+                
+                scrollbar = tk.Scrollbar(frame)
+                scrollbar.pack(side='right', fill='y')
+                
+                error_text = tk.Text(frame, wrap='word', yscrollcommand=scrollbar.set)
+                error_text.pack(expand=True, fill='both')
+                error_text.insert('1.0', error_details)
+                error_text.config(state='disabled')
+                
+                scrollbar.config(command=error_text.yview)
+                
+                # Close button
+                close_button = tk.Button(
+                    detail_window,
+                    text="Close",
+                    command=detail_window.destroy
+                )
+                close_button.pack(pady=10)
+                
+                detail_window.transient(error_root)
+                detail_window.grab_set()
+                error_root.wait_window(detail_window)
+            
+            error_root.destroy()
+            
+        except:
+            # If even the error dialog fails, fall back to console
+            print("Critical application error:")
+            import traceback
+            traceback.print_exc()
+
+def create_sample_file(file_name):
+    """Create a sample CSV file with minimal data."""
+    if file_name == 'studentdetails.csv':
+        with open(file_name, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(['school_id', 'name', 'class'])
+            writer.writerow(['S001', 'Sample Student', 'Class 10'])
+    elif file_name == 'bookdata.csv':
+        with open(file_name, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(['barcode', 'title', 'topic', 'is_purchased'])
+            writer.writerow(['B001', 'Sample Book', 'General', '0'])
 
 if __name__ == "__main__":
     main()

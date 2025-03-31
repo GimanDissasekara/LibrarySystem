@@ -1,5 +1,5 @@
 barcode,title,topic,is_purchased
-B001,Python Basics,Programming,1
+B001,Python Basics,Programming,0
 B002,Python Fundamentals,Programming,1
 B003,Advanced Python Programming,Programming,0
 B004,Web Development with Python,Programming,0
@@ -14,3 +14,107 @@ B012,Algebra Basics,Mathematics,0
 B013,Geometry Principles,Mathematics,0
 B014,Calculus Introduction,Mathematics,0
 B015,Trigonometry,Mathematics,0
+B016,Python for Data Analysis,Programming,0
+B017,Machine Learning with Python,Programming,0
+B018,Python GUI Programming,Programming,0
+B019,Python Network Programming,Programming,0
+B020,Python Testing Essentials,Programming,0
+B021,Medieval History,History,0
+B022,Renaissance Era,History,0
+B023,Industrial Revolution,History,0
+B024,Cold War Chronicles,History,0
+B025,Ancient Egyptian History,History,0
+B026,Linear Algebra,Mathematics,0
+B027,Discrete Mathematics,Mathematics,0
+B028,Probability Theory,Mathematics,0
+B029,Number Theory,Mathematics,0
+B030,Differential Equations,Mathematics,0
+B031,Python Algorithms,Programming,0
+B032,Python Design Patterns,Programming,0
+B033,Python for Finance,Programming,0
+B034,Python Automation,Programming,0
+B035,Game Development with Python,Programming,0
+B036,Asian History,History,0
+B037,African Kingdoms,History,0
+B038,World War I,History,0
+B039,World War II,History,0
+B040,Ancient Greek History,History,0
+B041,Statistics Fundamentals,Mathematics,0
+B042,Applied Mathematics,Mathematics,0
+B043,Mathematical Logic,Mathematics,0
+B044,Topology,Mathematics,0
+B045,Vector Calculus,Mathematics,0
+B046,Django Web Framework,Programming,0
+B047,Flask Framework Guide,Programming,0
+B048,Python Data Structures,Programming,0
+B049,Python Optimization,Programming,0
+B050,Python Security,Programming,0
+B051,Middle Eastern History,History,0
+B052,Roman Empire,History,0
+B053,Byzantine Empire,History,0
+B054,French Revolution,History,0
+B055,American Civil War,History,0
+B056,Abstract Algebra,Mathematics,0
+B057,Real Analysis,Mathematics,0
+B058,Complex Analysis,Mathematics,0
+B059,Combinatorics,Mathematics,0
+B060,Graph Theory,Mathematics,0
+B061,Python for Beginners,Programming,0
+B062,Intermediate Python,Programming,0
+B063,Scientific Python,Programming,0
+B064,Python Concurrency,Programming,0
+B065,Python Performance,Programming,0
+B066,Ancient Chinese History,History,0
+B067,Japanese History,History,0
+B068,Russian History,History,0
+B069,British History,History,0
+B070,Indian History,History,0
+B071,Mathematical Physics,Mathematics,0
+B072,Numerical Methods,Mathematics,0
+B073,Operations Research,Mathematics,0
+B074,Game Theory,Mathematics,0
+B075,Fractal Geometry,Mathematics,0
+B076,Python Cookbook,Programming,0
+B077,Python Standard Library,Programming,0
+B078,Python Decorators,Programming,0
+B079,Python Generators,Programming,0
+B080,Python Metaprogramming,Programming,0
+B081,Viking History,History,0
+B082,Aztec Civilization,History,0
+B083,Mayan Civilization,History,0
+B084,Incan Empire,History,0
+B085,Ancient Mesopotamia,History,0
+B086,Set Theory,Mathematics,0
+B087,Category Theory,Mathematics,0
+B088,Mathematical Modeling,Mathematics,0
+B089,Financial Mathematics,Mathematics,0
+B090,Actuarial Mathematics,Mathematics,0
+B091,Python Data Visualization,Programming,0
+B092,Python Web Scraping,Programming,0
+B093,Python NLP,Programming,0
+B094,Python Computer Vision,Programming,0
+B095,Python IoT,Programming,0
+B096,Ancient Persian Empire,History,0
+B097,Ottoman Empire,History,0
+B098,Mongol Empire,History,0
+B099,Colonial America,History,0
+B100,Ancient India,History,0
+B101,Algebraic Geometry,Mathematics,0
+B102,Differential Geometry,Mathematics,0
+B103,Algebraic Topology,Mathematics,0
+B104,Mathematical Biology,Mathematics,0
+B105,Cryptography,Mathematics,0
+B106,Python Microservices,Programming,0
+B107,Python Testing Frameworks,Programming,0
+B108,Python Debugging,Programming,0
+B109,Python Profiling,Programming,0
+B110,Python Packaging,Programming,0
+B111,Ancient Rome,History,0
+B112,Ancient Greece,History,0
+B113,Ancient China,History,0
+B114,Ancient Japan,History,0
+B115,Ancient Africa,History,0
+B116,Mathematical Statistics,Mathematics,0
+B117,Time Series Analysis,Mathematics,0
+B118,Multivariate Analysis,Mathematics,0
+B119,Regression Analysis,Mathematics,0
