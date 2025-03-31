@@ -550,7 +550,7 @@ For support, please contact your system administrator.
         # Version info
         version_info = ttk.Label(
             container,
-            text="Version 1.0.0 | © 2023 Library System",
+            text="Version 1.0 | © 2025 Library System",
             style='TLabel',
             font=('Helvetica', 8)
         )
